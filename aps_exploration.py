@@ -1,9 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 
-# =====================================
+# =========================================
 # 1. Request APS homepage
-# =====================================
+# =========================================
 
 url = "https://www.aps.dz/en"
 
@@ -19,20 +19,31 @@ print("Length:", len(response.text))
 # position = html.find("article")
 # print(html[position - 200:position + 500])
 
-# =====================================
+# =========================================
 # 2.Parse HTML with BeautifulSoup
-# =====================================
+# =========================================
 
 soup = BeautifulSoup(response.text, "html.parser")
+
 
 # First <a> element on the page
 link = soup.find("a")
 print(link.get("href"))
 print(link.get_text(strip=True))
 
+# =========================================
+# 3. Explore links on the homepage
+# =========================================
+
 # Number of <a> elements on the page
+
 links = soup.find_all("a")
-print(len(links))
+print("Number of all links:", len(links))
+
+
+# =========================================
+# 4. Explore a specific article
+# =========================================
 
 # Find a specific article
 article_link = soup.find(
@@ -40,15 +51,21 @@ article_link = soup.find(
     href=lambda href: href and "mu4dbg9h" in href
 )
 
-print(article_link.get("href"))
+print("Article href:", article_link.get("href"))
 
-# Extract title
-title = article_link.find("h2")
-print(title.get_text(strip=True))
+# Extract article title from the homepage card
+title = article_link.find(["h2", "h3"])
+print("Title:", title.get_text(strip=True))
 
-# Extract date
+# Extract article date from the homepage card
 date = article_link.find("p")
-print(date.get_text(strip=True))
+print("Date;", date.get_text(strip=True))
+
+
+# =========================================
+# 5. Request the individual article page
+# =========================================
+
 
 # Build the full article URL
 article_url = "https://www.aps.dz" + article_link.get("href")
@@ -57,30 +74,35 @@ print(article_url)
 # Request the individual article page
 article_response = requests.get(article_url)
 
-print(article_response.status_code)
-print(len(article_response.text))
+print("Article status code:", article_response.status_code)
+print("Article HTML length:", len(article_response.text))
 
+# Parse the article page
 article_soup = BeautifulSoup(article_response.text, "html.parser")
 
 # Experiment: searching for the exact h element for the title
 # print(article_soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]))
 
-# Extract the title
+# Extract the article title
 title = article_soup.find("h1")
-print(title.get_text(strip=True))
+print("Article title:", title.get_text(strip=True))
 
 # Experiment:
 # print(article_soup.get_text(strip=True)[:3000])
 
+# Extract the article lead/description
 lead = article_soup.find(
-    string=lambda text: text and "ALGIERS - The President of the Republic" in text
+    string=lambda text: (
+        text
+        and "ALGIERS - The President of the Republic" in text
+    )
 )
 
 # print(lead)
 # print(lead.parent)
 
 description = lead.parent.get_text(strip=True)
-print(description)
+print("Description:", description)
 
 """
 
@@ -124,6 +146,11 @@ dossier_image = dossier_link.find("img")
 print(dossier_image.get("src"))
 """
 
+# =========================================
+# 6. Identify article links automatically
+# =========================================
+
+
 article_urls = set()
 
 for link in links:
@@ -135,5 +162,8 @@ for link in links:
         if "image%2Farticle" in src:
             article_urls.add(link.get("href"))
 
-print(article_urls)
-print("Number of unique articles:", len(article_urls))
+# print(article_urls)
+print("Unique article URLs:", len(article_urls))
+
+for article_url in article_urls:
+    print(article_url)
