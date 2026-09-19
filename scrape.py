@@ -1,6 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
 
+# =====================================
+# 1. Request APS homepage
+# =====================================
+
 url = "https://www.aps.dz/en"
 
 response = requests.get(url)
@@ -15,9 +19,9 @@ print("Length:", len(response.text))
 # position = html.find("article")
 # print(html[position - 200:position + 500])
 
-#---------------------------------
-# Explore HTML with BeautifulSoup
-#---------------------------------
+# =====================================
+# 2.Parse HTML with BeautifulSoup
+# =====================================
 
 soup = BeautifulSoup(response.text, "html.parser")
 
@@ -78,3 +82,58 @@ lead = article_soup.find(
 description = lead.parent.get_text(strip=True)
 print(description)
 
+"""
+
+for link in links:
+    href = link.get("href")
+
+    if href and "news" in href:
+        print(href)
+
+for link in links:
+    title = link.find(["h2", "h3"])
+
+    if title:
+        print(title.get_text(strip=True))
+
+article_link = soup.find(
+    "a",
+    href=lambda href: href and "mu5nkqag" in href
+)
+
+print(article_link)
+
+
+print(article_link.get("class"))
+
+title = article_link.find(["h2", "h3"])
+print(title.get("class"))
+
+dossier_link = soup.find(
+    "a",
+    href=lambda href: href and "mn35o7nd" in href
+)
+
+print(dossier_link)
+
+
+article_image = article_link.find("img")
+print(article_image.get("src"))
+
+dossier_image = dossier_link.find("img")
+print(dossier_image.get("src"))
+"""
+
+article_urls = set()
+
+for link in links:
+    image = link.find("img")
+
+    if image:
+        src = image.get("src")
+
+        if "image%2Farticle" in src:
+            article_urls.add(link.get("href"))
+
+print(article_urls)
+print("Number of unique articles:", len(article_urls))
