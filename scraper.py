@@ -9,58 +9,86 @@ SOURCE_URL = f"{BASE_URL}/en"
 # =========================================
 
 def parse_article(article_url):
-    article_response = requests.get(article_url)
 
-    # Parse homepage HTML
-    article_soup = BeautifulSoup(
-        article_response.text,
-        "html.parser"
-    )
+    try:
+        article_response = requests.get(
+            article_url,
+            timeout=10
+        )
 
-    title = article_soup.find("h1")
+        article_response.raise_for_status()
 
-    date = article_soup.find("span", class_="text-xs")
+        # Parse homepage HTML
+        article_soup = BeautifulSoup(
+            article_response.text,
+            "html.parser"
+        )
 
-    lead = article_soup.find("p")
+        title = article_soup.find("h1")
+        date = article_soup.find("span", class_="text-xs")
+        lead = article_soup.find("p")
 
-    description = lead.get_text(" ", strip=True) if lead else None
+        description = lead.get_text(" ", strip=True) if lead else None
 
-    article = {
-        "title": title.get_text(strip=True) if title else None,
-        "url": article_url,
-        "date": date.get_text(strip=True) if date else None,
-        "description": description
-    }
+        article = {
+            "title": title.get_text(strip=True) if title else None,
+            "url": article_url,
+            "date": date.get_text(strip=True) if date else None,
+            "description": description
+        }
 
-    return article
+        return article
+
+    except requests.RequestException as error:
+        print(f"Failed to fetch {article_url}: {error}")
+        return None
+
+
+# =========================================
+# Find article URLs
+# =========================================
+def get_article_urls(soup):
+
+    article_urls = set()
+
+    for link in soup.find_all("a"):
+        image = link.find("img")
+
+        if image:
+            src = image.get("src")
+
+            if "image%2Farticle" in src:
+                article_urls.add(link.get("href"))
+
+    return article_urls
 
 
 # =========================================
 # Fetch homepage
 # =========================================
 
-response = requests.get(SOURCE_URL)
+response = requests.get(
+    SOURCE_URL,
+    timeout=10
+)
+
+response.raise_for_status()
+
 print(response.status_code)
 
-soup = BeautifulSoup(response.text, "html.parser")
+soup = BeautifulSoup(
+    response.text, 
+    "html.parser"
+)
+
 
 # =========================================
 # Find article URLs
 # =========================================
 
-article_urls = set()
-
-for link in soup.find_all("a"):
-    image = link.find("img")
-
-    if image:
-        src = image.get("src")
-
-        if "image%2Farticle" in src:
-            article_urls.add(link.get("href"))
+article_urls = get_article_urls(soup)
 
 print("Found", len(article_urls), "unique articles")
-
 
 # =========================================
 # Parse articles
@@ -74,10 +102,10 @@ for article_path in article_urls:
 
     article = parse_article(article_url)
 
-    articles.append(article)
+    if article:articles.append(article)
 
 print("Collected:", len(articles), "articles")
 
 for article in articles:
     print(article)
-   
+
