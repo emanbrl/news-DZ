@@ -1,8 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
 BASE_URL = "https://www.aps.dz"
 SOURCE_URL = f"{BASE_URL}/en"
+
+session = requests.Session()
 
 # =========================================
 # Parse on article
@@ -11,7 +14,7 @@ SOURCE_URL = f"{BASE_URL}/en"
 def parse_article(article_url):
 
     try:
-        article_response = requests.get(
+        article_response = session.get(
             article_url,
             timeout=10
         )
@@ -67,17 +70,20 @@ def get_article_urls(soup):
 # Fetch homepage
 # =========================================
 
-response = requests.get(
-    SOURCE_URL,
-    timeout=10
-)
+def fetch_page(url):
+    response = session.get(
+        url,
+        timeout=10
+    )
 
-response.raise_for_status()
+    response.raise_for_status()
 
-print(response.status_code)
+    return response.text
+
+html = fetch_page(SOURCE_URL)
 
 soup = BeautifulSoup(
-    response.text, 
+    html, 
     "html.parser"
 )
 
@@ -98,7 +104,7 @@ articles = []
 
 for article_path in article_urls:
 
-    article_url = BASE_URL + article_path
+    article_url = urljoin(BASE_URL, article_path)
 
     article = parse_article(article_url)
 
