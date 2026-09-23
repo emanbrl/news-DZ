@@ -1,7 +1,8 @@
 import logging
 import time
 from datetime import datetime
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
+import json
 
 import requests
 from bs4 import BeautifulSoup
@@ -63,6 +64,16 @@ def fetch_page(url):
 # Parse article
 # =========================================
 
+def get_category(article_url):
+    """Extract the category from an APS article URL."""
+
+    path_parts = urlparse(article_url).path.strip("/").split("/")
+
+    if len(path_parts) >= 2:
+        return path_parts[-2]
+
+    return None
+
 def parse_article(article_url):
 
     """Extract article metadata from an APS article page."""
@@ -77,6 +88,7 @@ def parse_article(article_url):
     title = article_soup.find("h1")
     date = article_soup.find("span", class_="text-xs")
     lead = article_soup.find("p") 
+    category = get_category(article_url)
 
     description = (
         lead.get_text(" ", strip=True)
@@ -97,7 +109,8 @@ def parse_article(article_url):
             date_text,
             "%A, %B %d, %Y %H:%M"
         )
-        
+
+    
     article = {
         "source":"APS",
         "title": (
@@ -106,7 +119,7 @@ def parse_article(article_url):
             else None
         ),
         "url": article_url,
-        #"category":
+        "category": category,
         "published_at": published_at,
         "description": description
     }
@@ -134,6 +147,33 @@ def get_article_urls(soup):
 
     return article_urls
 
+
+def save_articles(articles,filepath):
+    """Save articles to a JSON file."""
+    
+    json_articles = [
+        {
+            **article,
+            "published_at": (
+                article["published_at"].isoformat()
+                if article["published_at"]
+                else None
+            ),
+        }
+        for article in articles
+    ]
+
+    with open(
+        filepath,
+        "w",
+        encoding="utf-8",
+    ) as file:
+        json.dump(
+            json_articles,
+            file,
+            ensure_ascii=False,
+            indent=2,
+        )
 
 # =========================================
 # Main scraper
@@ -179,14 +219,24 @@ def main():
 
         time.sleep(REQUEST_DELAY)
 
+    articles.sort(
+        key=lambda article: article["published_at"] or datetime.min,
+        reverse=True,
+    )
+    
     logger.info(
         "Collected %d articles",
         len(articles)
     )
 
-    for article in articles:
-        print(article)
+    save_articles(
+        articles,
+        "data/aps_articles.json",
+    )
 
+    logger.info(
+        "Saved dataset to data/aps_articles.json"
+    )
 
 if __name__ == "__main__":
     main()
