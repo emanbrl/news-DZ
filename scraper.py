@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 from urllib.parse import urljoin, urlparse
 import json
+import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -87,14 +88,24 @@ def parse_article(article_url):
 
     title = article_soup.find("h1")
     date = article_soup.find("span", class_="text-xs")
-    lead = article_soup.find("p") 
+    lead = article_soup.find("p")
+
     category = get_category(article_url)
 
-    description = (
-        lead.get_text(" ", strip=True)
-        if lead
-        else None
-    )
+    description = None
+
+    if lead:
+        description = lead.get_text("", strip=False)
+
+        # Normalize repeated whitespace
+        description = re.sub(r"\s+", " ", description).strip()
+
+        # Normalize the location prefic
+        description = re.sub(
+            r"^(ALGIERS|NEW YORK)\s*-\s*",
+            r"\1 - ",
+            description,
+        )
 
     date_text = (
         date.get_text(strip=True)
