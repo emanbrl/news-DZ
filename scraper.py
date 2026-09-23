@@ -1,19 +1,27 @@
+import logging
+import time
+from datetime import datetime
+from urllib.parse import urljoin
+
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
-import time
-import logging
-from datetime import datetime
+
+
+# =========================================
+# Configuration
+# =========================================
 
 BASE_URL = "https://www.aps.dz"
 SOURCE_URL = f"{BASE_URL}/en"
 
-session = requests.Session()
 
-session.headers.update({
-    "User-Agent": "News-DZ/1.0"
-})
+REQUEST_TIMEOUT = 10
+REQUEST_DELAY = 1
 
+
+# =========================================
+# Logging
+# =========================================
 
 logging.basicConfig(
     level = logging.INFO,
@@ -24,14 +32,43 @@ logger = logging.getLogger(__name__)
 
 
 # =========================================
-# Parse on article
+# HTTP session
+# =========================================
+
+session = requests.Session()
+
+session.headers.update({
+    "User-Agent": "News-DZ/1.0"
+})
+
+
+# =========================================
+# Fetch page
+# =========================================
+
+def fetch_page(url):
+    """Fetch a webpage and return its HTML"""
+
+    response = session.get(
+        url,
+        timeout=REQUEST_TIMEOUT
+    )
+
+    response.raise_for_status()
+
+    return response.text
+
+
+# =========================================
+# Parse article
 # =========================================
 
 def parse_article(article_url):
 
+    """Extract article metadata from an APS article page."""
+
     html = fetch_page(article_url)
 
-    # Parse homepage HTML
     article_soup = BeautifulSoup(
         html,
         "html.parser"
@@ -39,13 +76,19 @@ def parse_article(article_url):
 
     title = article_soup.find("h1")
     date = article_soup.find("span", class_="text-xs")
-    lead = article_soup.find("p")
-    #source = 
-    #category = 
+    lead = article_soup.find("p") 
 
-    description = lead.get_text(" ", strip=True) if lead else None
+    description = (
+        lead.get_text(" ", strip=True)
+        if lead
+        else None
+    )
 
-    date_text = date.get_text(strip=True) if date else None
+    date_text = (
+        date.get_text(strip=True)
+        if date
+        else None
+    )
 
     published_at = None
 
@@ -56,12 +99,16 @@ def parse_article(article_url):
         )
         
     article = {
-        "title": title.get_text(strip=True) if title else None,
+        "source":"APS",
+        "title": (
+            title.get_text(strip=True)
+            if title
+            else None
+        ),
         "url": article_url,
-        "date": published_at,
-        "description": description
-        #"source":
         #"category":
+        "published_at": published_at,
+        "description": description
     }
 
     return article
@@ -70,7 +117,9 @@ def parse_article(article_url):
 # =========================================
 # Find article URLs
 # =========================================
+
 def get_article_urls(soup):
+    """Find unique article URLs on the APS homepage."""
 
     article_urls = set()
 
@@ -80,74 +129,64 @@ def get_article_urls(soup):
         if image:
             src = image.get("src")
 
-            if "image%2Farticle" in src:
+            if src and "image%2Farticle" in src:
                 article_urls.add(link.get("href"))
 
     return article_urls
 
 
 # =========================================
-# Fetch homepage
+# Main scraper
 # =========================================
 
-def fetch_page(url):
-    response = session.get(
-        url,
-        timeout=10
+def main():
+
+    html = fetch_page(SOURCE_URL)
+
+    soup = BeautifulSoup(
+        html,
+        "html.parser",
     )
 
-    response.raise_for_status()
+    article_urls = get_article_urls(soup)
 
-    return response.text
+    logger.info(
+        "Found %d unique articles",
+        len(article_urls),
+    )
 
-html = fetch_page(SOURCE_URL)
+    articles = []
 
-soup = BeautifulSoup(
-    html, 
-    "html.parser"
-)
+    for article_path in article_urls:
 
-
-# =========================================
-# Find article URLs
-# =========================================
-
-article_urls = get_article_urls(soup)
-
-logger.info(
-    "Found %d unique articles",
-    len(article_urls)
-)
-# =========================================
-# Parse articles
-# =========================================
-
-articles = []
-
-for article_path in article_urls:
-
-    article_url = urljoin(BASE_URL, article_path)
-
-    try:
-        article = parse_article(article_url)
-
-        if article:
-            articles.append(article)
-
-    except requests.RequestsException as error:
-        logger.error(
-            "Failed to fetch %s: %s",
-            article_url,
-            error
+        article_url = urljoin(
+            BASE_URL,
+            article_path,
         )
 
-    time.sleep(1)
+        try:
+            article = parse_article(article_url)
 
-logger.info(
-    "Collected %d articles",
-    len(articles)
-)
+            if article:
+                articles.append(article)
 
-for article in articles:
-    print(article)
+        except requests.RequestException as error:
+            logger.error(
+                "Failed to fetch %s: %s",
+                article_url,
+                error,
+            )
 
+        time.sleep(REQUEST_DELAY)
+
+    logger.info(
+        "Collected %d articles",
+        len(articles)
+    )
+
+    for article in articles:
+        print(article)
+
+
+if __name__ == "__main__":
+    main()

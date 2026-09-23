@@ -67,9 +67,33 @@ These features will be introduced incrementally rather than all at once.
 
 ## Current Status
 
-🚧 Project initialization
+🚧 Early development
 
-The repository and development environment are being established before implementing the first scraper.
+The initial APS scraper has been implemented and tested.
+
+Current capabilities:
+
+- Fetch the APS homepage using `requests`
+- Parse HTML using BeautifulSoup
+- Identify article links
+- Remove duplicate article URLs
+- Fetch individual article pages
+- Extract article titles
+- Extract publication dates
+- Extract article descriptions
+- Handle HTTP/request errors
+- Use a persistent HTTP session
+- Identify the scraper with a custom User-Agent
+- Apply a delay between article requests
+- Parse publication dates into Python `datetime` objects
+
+Next steps:
+
+- Normalize the article schema
+- Add source and category metadata
+- Save collected articles as JSON
+- Introduce PostgreSQL
+- Implement additional news-source scrapers
 
 ## Learning Objectives
 
