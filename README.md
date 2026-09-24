@@ -69,7 +69,7 @@ These features will be introduced incrementally rather than all at once.
 
 🚧 Early development
 
-The initial APS scraper has been implemented and tested.
+The initial APS ingestion pipeline has been implemented and tested.
 
 Current capabilities:
 
@@ -81,19 +81,31 @@ Current capabilities:
 - Extract article titles
 - Extract publication dates
 - Extract article descriptions
+- Extract article categories
+- Normalize article descriptions
+- Represent articles using a shared `Article` data model
 - Handle HTTP/request errors
 - Use a persistent HTTP session
 - Identify the scraper with a custom User-Agent
 - Apply a delay between article requests
-- Parse publication dates into Python `datetime` objects
+- Sort articles by publication date
+- Export collected articles to JSON
 
-Next steps:
+Current architecture:
 
-- Normalize the article schema
-- Add source and category metadata
-- Save collected articles as JSON
-- Introduce PostgreSQL
-- Implement additional news-source scrapers
+```text
+APS
+ ↓
+Scraper
+ ↓
+Article parsing
+ ↓
+Text normalization
+ ↓
+Article model
+ ↓
+JSON dataset
+```
 
 ## Learning Objectives
 

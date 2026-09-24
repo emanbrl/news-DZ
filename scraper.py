@@ -1,13 +1,14 @@
 import json
 import logging
-import re
 import time
+from dataclasses import asdict
+from datetime import datetime
+from urllib.parse import urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
+
 from models.article import Article
-from urllib.parse import urljoin, urlparse
-from datetime import datetime
-from dataclasses import asdict
 from utils.text import normalize_description
 
 
@@ -28,8 +29,8 @@ REQUEST_DELAY = 1
 # =========================================
 
 logging.basicConfig(
-    level = logging.INFO,
-    format = "%(levelname)s: %(message)s"
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s",
 )
 
 logger = logging.getLogger(__name__)
@@ -150,7 +151,7 @@ def get_article_urls(soup):
     return article_urls
 
 
-def save_articles(articles,filepath):
+def save_articles(articles, filepath):
     """Save articles to a JSON file."""
     
     json_articles = []
@@ -163,8 +164,7 @@ def save_articles(articles,filepath):
                 article_data["published_at"].isoformat()
             )
 
-        json_articles.append(article_data
-        )
+        json_articles.append(article_data)
 
     with open(
         filepath,
