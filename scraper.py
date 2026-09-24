@@ -1,12 +1,14 @@
-import logging
-import time
-from datetime import datetime
-from urllib.parse import urljoin, urlparse
 import json
+import logging
 import re
-
+import time
 import requests
 from bs4 import BeautifulSoup
+from models.article import Article
+from urllib.parse import urljoin, urlparse
+from datetime import datetime
+from dataclasses import asdict
+from utils.text import normalize_description
 
 
 # =========================================
@@ -95,17 +97,8 @@ def parse_article(article_url):
     description = None
 
     if lead:
-        description = lead.get_text("", strip=False)
-
-        # Normalize repeated whitespace
-        description = re.sub(r"\s+", " ", description).strip()
-
-        # Normalize the location prefic
-        description = re.sub(
-            r"^(ALGIERS|NEW YORK)\s*-\s*",
-            r"\1 - ",
-            description,
-        )
+        raw_description = lead.get_text("", strip=False)
+        description = normalize_description(raw_description)
 
     date_text = (
         date.get_text(strip=True)
@@ -122,20 +115,18 @@ def parse_article(article_url):
         )
 
     
-    article = {
-        "source":"APS",
-        "title": (
+    return Article(
+        source="APS",
+        title=(
             title.get_text(strip=True)
             if title
             else None
         ),
-        "url": article_url,
-        "category": category,
-        "published_at": published_at,
-        "description": description
-    }
-
-    return article
+        url=article_url,
+        category=category,
+        published_at=published_at,
+        description=description,
+    )
 
 
 # =========================================
@@ -162,17 +153,18 @@ def get_article_urls(soup):
 def save_articles(articles,filepath):
     """Save articles to a JSON file."""
     
-    json_articles = [
-        {
-            **article,
-            "published_at": (
-                article["published_at"].isoformat()
-                if article["published_at"]
-                else None
-            ),
-        }
-        for article in articles
-    ]
+    json_articles = []
+
+    for article in articles:
+        article_data = asdict(article)
+
+        if article_data["published_at"]:
+            article_data["published_at"] = (
+                article_data["published_at"].isoformat()
+            )
+
+        json_articles.append(article_data
+        )
 
     with open(
         filepath,
@@ -231,7 +223,7 @@ def main():
         time.sleep(REQUEST_DELAY)
 
     articles.sort(
-        key=lambda article: article["published_at"] or datetime.min,
+        key=lambda article: article.published_at or datetime.min,
         reverse=True,
     )
     
